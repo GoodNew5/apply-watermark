@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import mime from 'mime'
 
-const VIDEO_DIR = './src/media' // put your video there
+const VIDEO_DIR = './src/input' // put your video there
 const OUTPUT_DIR = './src/output' // get your processed video
 const WATERMARK_PATH = './src/watermark.png' // replace by your watermark
 
