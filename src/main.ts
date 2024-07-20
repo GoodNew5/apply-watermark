@@ -28,6 +28,7 @@ async function applyWatermark() {
     fs.access(OUTPUT_DIR, fs.constants.W_OK, (err) => {
       if (err) {
         console.error(`Cannot write to output directory: ${OUTPUT_DIR}`)
+
         return
       }
     })
