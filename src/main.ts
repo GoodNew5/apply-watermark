@@ -5,7 +5,7 @@ import mime from 'mime'
 
 const VIDEO_DIR = './src/media' // put your video there
 const OUTPUT_DIR = './src/output' // get your processed video
-const WATERMARK_PATH = './watermark.png' // replace by your watermark
+const WATERMARK_PATH = './src/watermark.png' // replace by your watermark
 
 async function applyWatermark() {
   if (!fs.existsSync(OUTPUT_DIR)) {
@@ -53,8 +53,6 @@ async function applyWatermark() {
 
   const files = fs.readdirSync(VIDEO_DIR)
   const videoFiles = files.filter((file) => mime.getType(file)?.startsWith('video'))
-
-  console.log(`${videoFiles.length} video files found`)
 
   for (const videoFile of videoFiles) {
     try {
