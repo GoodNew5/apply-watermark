@@ -15,11 +15,12 @@ async function applyWatermark() {
   const processVideo = (videoFile: string) => {
     if (!fs.existsSync(WATERMARK_PATH)) {
       console.error(`Watermark file not found at: ${WATERMARK_PATH}`)
+
       return
     }
 
     const VIDEO_PATH = path.join(VIDEO_DIR, videoFile)
-    const OUTPUT_PATH = path.join(OUTPUT_DIR, path.basename(videoFile, path.extname(videoFile)) + '_processed.mp4')
+    const OUTPUT_PATH = path.join(OUTPUT_DIR, `${path.basename(videoFile, path.extname(videoFile))}_processed.mp4`)
 
     console.log(`Processing video file: ${VIDEO_PATH}`)
     console.log(`Output will be saved to: ${OUTPUT_PATH}`)
