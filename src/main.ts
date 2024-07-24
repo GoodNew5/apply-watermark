@@ -3,6 +3,27 @@ import fs from 'fs'
 import path from 'path'
 import mime from 'mime'
 
+interface VideoResolution {
+  width: number
+  height: number
+}
+
+async function getVideoResolution(videoPath: string): Promise<VideoResolution> {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(videoPath, (err, metadata) => {
+      if (err) {
+        reject(err)
+      }
+
+      const { width, height } = metadata.streams[0]
+
+      if (width && height) {
+        resolve({ width, height })
+      }
+    })
+  })
+}
+
 const VIDEO_DIR = './src/input' // put your video there
 const OUTPUT_DIR = './src/output' // get your processed video
 const WATERMARK_PATH = './src/watermark.png' // replace by your watermark
@@ -12,7 +33,7 @@ async function applyWatermark() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true })
   }
 
-  const processVideo = (videoFile: string) => {
+  const processVideo = async (videoFile: string) => {
     if (!fs.existsSync(WATERMARK_PATH)) {
       console.error(`Watermark file not found at: ${WATERMARK_PATH}`)
 
@@ -33,11 +54,26 @@ async function applyWatermark() {
       }
     })
 
+    const dimensions: VideoResolution = await getVideoResolution(VIDEO_PATH)
+    const width = dimensions.width
+
+    if (!width) throw Error('failed to get video width')
+
+    const getCoef = () => {
+      if (width <= 600) return 2.5
+      if (width > 600 && width <= 1080) return 3.5
+
+      return 6
+    }
+
+    const coef = getCoef()
+    const watermarkWidth = Math.round(width / coef)
+
     return new Promise((resolve, reject) => {
       ffmpeg(VIDEO_PATH)
         .input(WATERMARK_PATH)
         .complexFilter(
-          "overlay=x='W/2-pow(-1,lt(mod(t,20),10))*((W-w)/2-10)-w/2':y='H/2-pow(-1,lt(mod(t,10),5))*((H-h)/2-10)-h/2'",
+          `[1:v]scale=${watermarkWidth}:-1[wm];[0:v][wm]overlay=x='W/2-pow(-1,lt(mod(t,20),10))*((W-w)/2-10)-w/2':y='H/2-pow(-1,lt(mod(t,10),5))*((H-h)/2-10)-h/2'`,
         )
         .outputOptions('-movflags frag_keyframe+empty_moov')
         .toFormat('mp4')
