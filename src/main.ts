@@ -55,7 +55,7 @@ async function applyWatermark() {
     })
 
     const dimensions: VideoResolution = await getVideoResolution(VIDEO_PATH)
-    const width = dimensions.width
+    const width = dimensions?.width
 
     if (!width) throw Error('failed to get video width')
 
