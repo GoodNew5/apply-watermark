@@ -61,7 +61,7 @@ async function applyWatermark() {
 
     const getCoef = () => {
       if (width <= 600) return 2.5
-      if (width > 600 && width <= 1080) return 3.5
+      if (width > 600 && width <= 2158) return 3.5
 
       return 6
     }
