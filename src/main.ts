@@ -56,19 +56,16 @@ async function applyWatermark() {
 
     const dimensions: VideoResolution = await getVideoResolution(VIDEO_PATH)
     const width = dimensions?.width
+    const height = dimensions?.height
 
     if (!width) throw Error('failed to get video width')
 
-    const getCoef = () => {
-      if (width <= 600) return 2.5
-      if (width > 600 && width <= 2158) return 3.5
-
-      return 6
+    const getWatermarkSize = () => {
+      // Set the watermark width to be 10% of the video width
+      return Math.round((width + height) * 0.1)
     }
 
-    const coef = getCoef()
-    const watermarkWidth = Math.round(width / coef)
-
+    const watermarkWidth = getWatermarkSize()
     return new Promise((resolve, reject) => {
       ffmpeg(VIDEO_PATH)
         .input(WATERMARK_PATH)
