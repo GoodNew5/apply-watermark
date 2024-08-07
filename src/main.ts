@@ -15,11 +15,16 @@ async function getVideoResolution(videoPath: string): Promise<VideoResolution> {
         reject(err)
       }
 
-      const { width, height } = metadata.streams[0]
+      const width = metadata.streams[0].width || metadata.streams[1].width
+      const height = metadata.streams[0].height || metadata.streams[1].height
 
       if (width && height) {
         resolve({ width, height })
+
+        return
       }
+
+      console.error('metadata width, height is undefined ')
     })
   })
 }
