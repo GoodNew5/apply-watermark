@@ -15,8 +15,8 @@ async function getVideoResolution(videoPath: string): Promise<VideoResolution> {
         reject(err)
       }
 
-      const width = metadata.streams[0].width || metadata.streams[1].width
-      const height = metadata.streams[0].height || metadata.streams[1].height
+      const width = metadata?.streams[0]?.width || metadata?.streams[1]?.width
+      const height = metadata?.streams[0]?.height || metadata?.streams[1]?.height
 
       if (width && height) {
         resolve({ width, height })
@@ -29,7 +29,7 @@ async function getVideoResolution(videoPath: string): Promise<VideoResolution> {
   })
 }
 
-const VIDEO_DIR = './src/input' // put your video there
+const INPUT_DIR = './src/input' // put your video there
 const OUTPUT_DIR = './src/output' // get your processed video
 const WATERMARK_PATH = './src/watermark.png' // replace by your watermark
 
@@ -38,17 +38,20 @@ async function applyWatermark() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true })
   }
 
-  const processVideo = async (videoFile: string) => {
+  const processMediaFile = async (mediaFile: string) => {
     if (!fs.existsSync(WATERMARK_PATH)) {
       console.error(`Watermark file not found at: ${WATERMARK_PATH}`)
 
       return
     }
 
-    const VIDEO_PATH = path.join(VIDEO_DIR, videoFile)
-    const OUTPUT_PATH = path.join(OUTPUT_DIR, `${path.basename(videoFile, path.extname(videoFile))}_processed.mp4`)
+    const INPUT_PATH = path.join(INPUT_DIR, mediaFile)
+    const OUTPUT_PATH = path.join(
+      OUTPUT_DIR,
+      `${path.basename(mediaFile, path.extname(mediaFile))}${path.extname(mediaFile)}`,
+    )
 
-    console.log(`Processing video file: ${VIDEO_PATH}`)
+    console.log(`Processing file: ${INPUT_PATH}`)
     console.log(`Output will be saved to: ${OUTPUT_PATH}`)
 
     fs.access(OUTPUT_DIR, fs.constants.W_OK, (err) => {
@@ -59,11 +62,15 @@ async function applyWatermark() {
       }
     })
 
-    const dimensions: VideoResolution = await getVideoResolution(VIDEO_PATH)
+    const dimensions: VideoResolution = await getVideoResolution(INPUT_PATH)
     const width = dimensions?.width
     const height = dimensions?.height
 
-    if (!width) throw Error('failed to get video width')
+    if (!width) {
+      console.error('failed to get video width')
+
+      return
+    }
 
     const getWatermarkSize = () => {
       // Set the watermark width to be 10% of the video width
@@ -72,29 +79,30 @@ async function applyWatermark() {
 
     const watermarkWidth = getWatermarkSize()
     return new Promise((resolve, reject) => {
-      ffmpeg(VIDEO_PATH)
+      ffmpeg(INPUT_PATH)
         .input(WATERMARK_PATH)
         .complexFilter(
           `[1:v]scale=${watermarkWidth}:-1[wm];[0:v][wm]overlay=x='W/2-pow(-1,lt(mod(t,20),10))*((W-w)/2-10)-w/2':y='H/2-pow(-1,lt(mod(t,10),5))*((H-h)/2-10)-h/2'`,
         )
         .outputOptions('-movflags frag_keyframe+empty_moov')
-        .toFormat('mp4')
         .save(OUTPUT_PATH)
         .on('end', () => {
-          resolve(`Finished processing video: ${VIDEO_PATH}`)
+          resolve(`Finished processing file: ${INPUT_PATH}`)
         })
         .on('error', (error) => {
-          reject(`Error processing video file: ${error}`)
+          reject(`Error processing file: ${error}`)
         })
     })
   }
 
-  const files = fs.readdirSync(VIDEO_DIR)
-  const videoFiles = files.filter((file) => mime.getType(file)?.startsWith('video'))
+  const files = fs.readdirSync(INPUT_DIR)
+  const media = files.filter(
+    (file) => mime.getType(file)?.startsWith('video') || mime.getType(file)?.startsWith('image'),
+  )
 
-  for (const videoFile of videoFiles) {
+  for (const mediaFile of media) {
     try {
-      await processVideo(videoFile)
+      await processMediaFile(mediaFile)
     } catch (error) {
       console.error(error)
     }
