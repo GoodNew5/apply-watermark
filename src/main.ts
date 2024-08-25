@@ -3,24 +3,28 @@ import fs from 'fs'
 import path from 'path'
 import mime from 'mime'
 
+
 interface VideoResolution {
   width: number
   height: number
 }
 
 async function getVideoResolution(videoPath: string): Promise<VideoResolution> {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(videoPath, (err, metadata) => {
-      if (err) {
-        reject(err)
-      }
+    return new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(videoPath, (err, metadata) => {
+        if (err) {
+          reject(err)
+        }
 
-      const { width, height } = metadata.streams[0]
-
-      if (width && height) {
-        resolve({ width, height })
-      }
-    })
+        if (metadata && metadata.streams && metadata.streams[0]) {
+          const { width, height } = metadata.streams[0]
+          if (width && height) {
+            resolve({ width, height })
+          }
+        } else {
+          reject(new Error('Failed to get video width and height'))
+        }
+    });
   })
 }
 
@@ -54,35 +58,40 @@ async function applyWatermark() {
       }
     })
 
-    const dimensions: VideoResolution = await getVideoResolution(VIDEO_PATH)
-    const width = dimensions?.width
-    const height = dimensions?.height
+    try {
+      const dimensions: VideoResolution = await getVideoResolution(VIDEO_PATH)
+      const width = dimensions?.width
+      const height = dimensions?.height
 
-    if (!width) throw Error('failed to get video width')
+      if (!width) throw Error('failed to get video width')
 
-    const getWatermarkSize = () => {
-      // Set the watermark width to be 10% of the video width
-      return Math.round((width + height) * 0.1)
+      const getWatermarkSize = () => {
+        // Set the watermark width to be 10% of the video width
+        return Math.round((width + height) * 0.1)
+      }
+
+      const watermarkWidth = getWatermarkSize()
+      return new Promise((resolve, reject) => {
+        ffmpeg(VIDEO_PATH)
+          .input(WATERMARK_PATH)
+          .complexFilter(
+            `[1:v]scale=${watermarkWidth}:-1[wm];[0:v][wm]overlay=x='W/2-pow(-1,lt(mod(t,20),10))*((W-w)/2-10)-w/2':y='H/2-pow(-1,lt(mod(t,10),5))*((H-h)/2-10)-h/2'`,
+          )
+          .outputOptions('-movflags frag_keyframe+empty_moov')
+          .toFormat('mp4')
+          .save(OUTPUT_PATH)
+          .on('end', () => {
+            // fs.unlinkSync(VIDEO_PATH);
+            resolve(`Finished processing video: ${VIDEO_PATH}`)
+          })
+          .on('error', (error) => {
+            reject(`Error processing video file: ${error}`)
+          })
+      })
+    } catch (err) {
+      console.error(err)
     }
 
-    const watermarkWidth = getWatermarkSize()
-    return new Promise((resolve, reject) => {
-      ffmpeg(VIDEO_PATH)
-        .input(WATERMARK_PATH)
-        .complexFilter(
-          `[1:v]scale=${watermarkWidth}:-1[wm];[0:v][wm]overlay=x='W/2-pow(-1,lt(mod(t,20),10))*((W-w)/2-10)-w/2':y='H/2-pow(-1,lt(mod(t,10),5))*((H-h)/2-10)-h/2'`,
-        )
-        .outputOptions('-movflags frag_keyframe+empty_moov')
-        .toFormat('mp4')
-        .save(OUTPUT_PATH)
-        .on('end', () => {
-          fs.unlinkSync(VIDEO_PATH);
-          resolve(`Finished processing video: ${VIDEO_PATH}`)
-        })
-        .on('error', (error) => {
-          reject(`Error processing video file: ${error}`)
-        })
-    })
   }
 
   const files = fs.readdirSync(VIDEO_DIR)
@@ -97,4 +106,7 @@ async function applyWatermark() {
   }
 }
 
-applyWatermark()
+while(true) {
+  await applyWatermark()
+  setTimeout(() => {}, 2000);
+}

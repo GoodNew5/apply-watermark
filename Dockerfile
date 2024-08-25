@@ -1,19 +1,16 @@
-FROM node:20
+FROM node:20-alpine
 
-RUN apt-get update && apt-get install -y cron
+RUN apk update
+RUN apk add
+RUN apk add ffmpeg
 
 WORKDIR /app
 
 COPY package*.json ./
-
-RUN npm install
+RUN yarn install
 
 COPY . .
 
-COPY crontab /etc/cron.d/my-cron-job
+RUN cd /app
 
-RUN chmod 0644 /etc/cron.d/my-cron-job
-RUN crontab /etc/cron.d/my-cron-job
-RUN touch /var/log/cron.log
-
-CMD cron && tail -f /var/log/cron.log
+CMD ["yarn", "start"]
