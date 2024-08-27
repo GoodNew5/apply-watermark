@@ -81,7 +81,7 @@ async function applyWatermark() {
           .toFormat('mp4')
           .save(OUTPUT_PATH)
           .on('end', () => {
-            // fs.unlinkSync(VIDEO_PATH);
+            fs.unlinkSync(VIDEO_PATH);
             resolve(`Finished processing video: ${VIDEO_PATH}`)
           })
           .on('error', (error) => {
